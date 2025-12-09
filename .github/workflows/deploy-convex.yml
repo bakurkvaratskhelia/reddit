@@ -33,6 +33,9 @@ jobs:
 
       - name: Deploy Convex functions
         env:
-          CONVEX_TOKEN: ${{ secrets.CONVEX_TOKEN }}
+          # Keep your secret name if you already added CONVEX_TOKEN in the repo secrets,
+          # map it here to the env var the CLI reads:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_TOKEN }}
         run: |
-          npx convex deploy --token "${CONVEX_TOKEN}"
+          # Run deploy without the --token flag; the CLI will read CONVEX_DEPLOY_KEY.
+          npx convex deploy
