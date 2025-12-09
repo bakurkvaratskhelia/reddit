@@ -1,0 +1,40 @@
+name: Deploy Convex + Publish Frontend to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Deploy Convex and build frontend (build runs with VITE_CONVEX_URL set)
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_TOKEN }}
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ secrets.VITE_CLERK_PUBLISHABLE_KEY }}
+          VITE_CLERK_FRONTEND_API: ${{ secrets.VITE_CLERK_FRONTEND_API }}
+        run: |
+          # Deploy convex functions; convex will run the build command with VITE_CONVEX_URL
+          npx convex deploy --cmd "npm run build" --cmd-url-env-var-name VITE_CONVEX_URL
+
+      - name: Publish to GitHub Pages (gh-pages branch)
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
