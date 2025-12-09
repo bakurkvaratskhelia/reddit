@@ -15,19 +15,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Use Node.js
+      - name: Use Node.js (use Node 20 to satisfy package engines)
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
       - name: Install dependencies
         run: npm ci
 
       - name: Deploy Convex functions
         env:
-          # Add CONVEX_TOKEN in your repo's Settings → Secrets and variables → Actions
           CONVEX_TOKEN: ${{ secrets.CONVEX_TOKEN }}
         run: |
-          # Deploy Convex functions using the token from GitHub Secrets.
-          # If your Convex CLI requires a different flag, adjust this command.
           npx convex deploy --token "${CONVEX_TOKEN}"
