@@ -1,8 +1,7 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
 import { getCurrentUserOrThrow } from "./users";
-import { counts, commentCountKey } from "./counter"
-import { paginationOptsValidator } from "convex/server";
+import { counts, commentCountKey } from "./counter";
 
 export const create = mutation({
     args: {
@@ -20,8 +19,9 @@ export const create = mutation({
     },
 });
 
+// Removed paginationOpts from args so this is a plain query that returns all comments for a post.
 export const getComments = query({
-    args: { postId: v.id("post"), paginationOpts: paginationOptsValidator },
+    args: { postId: v.id("post") },
     handler: async (ctx, args) => {
         const comments = await ctx.db
             .query("comments")
