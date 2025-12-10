@@ -1,10 +1,9 @@
 import { mutation, query } from "./_generated/server";
-import { paginatedQuery } from "convex/server";
 import type { QueryCtx } from "./_generated/server";
 import { ConvexError, v } from "convex/values";
+import { getCurrentUserOrThrow } from "./users";
 import type { Doc, Id } from "./_generated/dataModel";
 import { counts, postCountKey } from "./counter";
-import type { PaginationResult } from "convex/server";
 
 type EnrichedPost = Omit<Doc<"post">, "subreddit"> & {
   author: { username: string } | undefined;
@@ -77,59 +76,45 @@ export const getPost = query({
   },
 });
 
-// Paginated subreddit posts (compatible with usePaginatedQuery)
-export const getSubredditPosts = paginatedQuery({
+// NOTE: Return plain arrays here (useQuery on the client).
+export const getSubredditPosts = query({
   args: { subredditName: v.string() },
-  handler: async (ctx: QueryCtx, args: any, paginationOpts: any): Promise<PaginationResult<EnrichedPost>> => {
+  handler: async (ctx: QueryCtx, args) => {
     const subreddit = await ctx.db
       .query("subreddit")
       .filter((q) => q.eq(q.field("name"), args.subredditName))
       .unique();
 
     if (!subreddit) {
-      return { page: [], isDone: true, continueCursor: null };
+      return [];
     }
 
-    // ctx.db.paginate returns { results, hasMore, cursor }
-    const page = await ctx.db
+    // Return the latest 20 posts (adjust `take()` if you want more)
+    const posts = await ctx.db
       .query("post")
       .withIndex("bySubreddit", (q) => q.eq("subreddit", subreddit._id))
-      .paginate(paginationOpts);
+      .take(20);
 
-    const enriched = await getEnrichedPosts(ctx, page.results);
-
-    // Map database pagination shape -> Convex PaginationResult shape expected by SDK
-    return {
-      page: enriched,
-      isDone: !page.hasMore,
-      continueCursor: page.cursor ?? null,
-    };
+    return getEnrichedPosts(ctx, posts);
   },
 });
 
-// Paginated user posts (compatible with usePaginatedQuery)
-export const userPosts = paginatedQuery({
+export const userPosts = query({
   args: { authorUsername: v.string() },
-  handler: async (ctx: QueryCtx, args: any, paginationOpts: any): Promise<PaginationResult<EnrichedPost>> => {
+  handler: async (ctx: QueryCtx, args) => {
     const user = await ctx.db
       .query("users")
       .filter((q) => q.eq(q.field("username"), args.authorUsername))
       .unique();
 
-    if (!user) return { page: [], isDone: true, continueCursor: null };
+    if (!user) return [];
 
-    const page = await ctx.db
+    const posts = await ctx.db
       .query("post")
       .withIndex("byAuthor", (q) => q.eq("authorId", user._id))
-      .paginate(paginationOpts);
+      .take(20);
 
-    const enriched = await getEnrichedPosts(ctx, page.results);
-
-    return {
-      page: enriched,
-      isDone: !page.hasMore,
-      continueCursor: page.cursor ?? null,
-    };
+    return getEnrichedPosts(ctx, posts);
   },
 });
 

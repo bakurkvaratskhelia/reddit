@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { usePaginatedQuery, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import PostCard from "../components/PostCard";
 import "../styles/SubmitPage.css";
@@ -7,20 +7,12 @@ import "../styles/SubmitPage.css";
 const ProfilePage = () => {
   const { username } = useParams<{ username: string }>();
 
-  // usePaginatedQuery's args must include `paginationOpts` per the generated types.
-  // When there is no username, pass "skip" (not undefined) so the hook types align.
-  const paginatedArgs = username
-    ? { authorUsername: username, paginationOpts: { limit: 20 } }
-    : "skip";
-
-  // usePaginatedQuery also requires an options object as the third argument.
-  const { results: posts, loadMore, status } = usePaginatedQuery(
+  // Use useQuery since server now returns an array
+  const posts = useQuery(
     api.post.userPosts,
-    paginatedArgs,
-    { initialNumItems: 20 }
+    username ? { authorUsername: username } : "skip"
   );
 
-  // useQuery likewise accepts "skip" to avoid passing undefined where args are required.
   const stats = useQuery(
     api.users.getPublicUser,
     username ? { username } : "skip"
@@ -49,14 +41,8 @@ const ProfilePage = () => {
           </div>
         ) : (
           posts.map((post) => (
-            // Ensure key is a string — convert Convex Id to string if necessary
             <PostCard key={post._id.toString()} post={post} showSubreddit={true} />
           ))
-        )}
-        {status === "CanLoadMore" && (
-          <button className="load-more" onClick={() => loadMore(20)}>
-            Load More
-          </button>
         )}
       </div>
     </div>
