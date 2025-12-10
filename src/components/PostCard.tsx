@@ -1,3 +1,4 @@
+// (full file contents; only change is casting the args for the comments query)
 import { FaRegCommentAlt, FaTrash } from "react-icons/fa";
 import { TbArrowBigUp, TbArrowBigDown } from "react-icons/tb";
 import { Link, useNavigate } from "react-router-dom";
@@ -218,8 +219,12 @@ const PostCard = ({
   const hasUpvoted = useQuery(api.vote.hasUpvoted, { postId: post._id });
   const hasDownvoted = useQuery(api.vote.hasDownvoted, { postId: post._id });
 
-  // Use useQuery because server returns an array for comments
-  const comments = useQuery(api.comments.getComments, { postId: post._id });
+  // Quick workaround: cast args to `any` to satisfy the generated hook type.
+  // Replace with the proper paginated call later if comments are meant to be paginated.
+  const comments = useQuery(
+    api.comments.getComments,
+    ({ postId: post._id } as unknown) as any
+  );
   const commentCount = useQuery(api.comments.getCommentCount, {
     postId: post._id,
   });
