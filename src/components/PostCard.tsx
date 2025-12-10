@@ -1,7 +1,8 @@
 import { FaRegCommentAlt, FaTrash } from "react-icons/fa";
 import { TbArrowBigUp, TbArrowBigDown } from "react-icons/tb";
 import { Link, useNavigate } from "react-router-dom";
-import { useMutation, useQuery } from "convex/react";
+import type { PaginationStatus } from "convex/react";
+import { usePaginatedQuery, useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { useUser } from "@clerk/clerk-react";
@@ -49,6 +50,8 @@ interface CommentSectionProps {
   comments: Doc<"comments">[];
   onSubmit: (content: string) => void;
   signedIn: boolean;
+  loadMore: (numItems: number) => void;
+  status: PaginationStatus;
 }
 
 interface VoteButtonsProps {
@@ -160,6 +163,8 @@ const CommentSection = ({
   comments,
   onSubmit,
   signedIn,
+  loadMore,
+  status,
 }: CommentSectionProps) => {
   const [newComment, setNewComment] = useState("");
 
@@ -195,6 +200,11 @@ const CommentSection = ({
           <Comment key={String(comment._id)} comment={comment} />
         ))}
       </div>
+      {status === "CanLoadMore" && (
+        <button className="load-more" onClick={() => loadMore(20)}>
+          Load More
+        </button>
+      )}
     </div>
   );
 };
@@ -218,8 +228,12 @@ const PostCard = ({
   const hasUpvoted = useQuery(api.vote.hasUpvoted, { postId: post._id });
   const hasDownvoted = useQuery(api.vote.hasDownvoted, { postId: post._id });
 
-  // Use useQuery because the server function returns an array of comments (Doc<"comments">[]).
-  const comments = useQuery(api.comments.getComments, { postId: post._id });
+  // pass paginationOpts in args and the required options object as the 3rd param
+  const { results: comments, loadMore, status } = usePaginatedQuery(
+    api.comments.getComments,
+    { postId: post._id, paginationOpts: { limit: 20 } },
+    { initialNumItems: 20 }
+  );
   const commentCount = useQuery(api.comments.getCommentCount, {
     postId: post._id,
   });
@@ -294,6 +308,8 @@ const PostCard = ({
             comments={comments ?? []}
             onSubmit={handleSubmitComment}
             signedIn={!!user}
+            loadMore={loadMore}
+            status={status}
           />
         )}
       </div>
